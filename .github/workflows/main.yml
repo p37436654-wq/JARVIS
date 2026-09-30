@@ -46,4 +46,29 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Check project
+        run: |
+          echo "Checking JARVIS project..."
+          find . -maxdepth 3 -type f | sort
+
+      - name: Build Debug APK
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          gradle --no-daemon --stacktrace assembleDebug
+
+      - name: Verify APK
+        run: |
+          ls -lh app/build/outputs/apk/debug/
+          test -f app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload JARVIS APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: JARVIS-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
       
