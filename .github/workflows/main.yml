@@ -1,4 +1,4 @@
-name: Build JARVIS Android
+name: Build JARVIS APK
 
 on:
   workflow_dispatch:
@@ -14,20 +14,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
-      - name: Make Gradle executable
-        run: chmod +x gradlew
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Build APK
-        run: ./gradlew assembleDebug
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
 
-      - name: Upload APK
+      - name: Build Debug APK
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          gradle --no-daemon assembleDebug
+
+      - name: Upload JARVIS APK
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-Assistant-APK
-          path: '**/build/outputs/apk/debug/*.apk'
+          name: JARVIS-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
