@@ -1,1 +1,273 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>JARVIS</title>
 
+<style>
+*{box-sizing:border-box}
+html,body{
+  margin:0;width:100%;height:100%;overflow:hidden;
+  background:#0b0a0f;color:#f4f1f5
+}
+body{font-family:Georgia,"Times New Roman",serif}
+.screen{position:absolute;inset:0}
+
+#boot{
+  display:flex;align-items:center;justify-content:center;
+  background:#09080d;z-index:5;transition:opacity .35s
+}
+.boot{text-align:center}
+.ring{
+  width:150px;height:150px;border:1px solid #aaa;
+  border-radius:50%;box-shadow:0 0 35px #666;
+  animation:p 1s infinite
+}
+.bt{
+  margin-top:25px;font:12px Arial;
+  letter-spacing:5px;color:#bbb
+}
+@keyframes p{
+  50%{transform:scale(1.08);opacity:.6}
+}
+
+#setup{
+  display:none;align-items:center;justify-content:center;
+  padding:30px
+}
+.card{text-align:center;width:min(88%,420px)}
+.logo{font-size:40px;letter-spacing:6px}
+.sub{
+  font:13px Arial;color:#85828c;
+  margin:12px 0 28px
+}
+input{
+  width:100%;padding:16px;border-radius:14px;
+  border:1px solid #39363f;background:#15131a;
+  color:#fff;text-align:center;font-size:16px
+}
+button{cursor:pointer}
+.cont{
+  width:100%;margin-top:12px;padding:15px;
+  border:0;border-radius:14px;
+  background:#dedcff;font-weight:bold
+}
+
+#home{display:none}
+.head{
+  height:100px;display:flex;
+  align-items:center;justify-content:center
+}
+.title{font-size:30px;font-weight:bold}
+.ico{
+  position:absolute;background:none;border:0;
+  color:#eee;font-size:28px
+}
+.back{left:18px}
+.brain{right:62px}
+.set{right:15px}
+
+.time{
+  position:absolute;top:88px;left:0;right:0;
+  text-align:center;font:11px Arial;
+  color:#666;letter-spacing:2px
+}
+
+.orb{
+  position:absolute;top:29%;left:50%;
+  transform:translate(-50%,-50%);
+  width:330px;height:330px;border-radius:50%
+}
+
+.dot{
+  position:absolute;width:3px;height:3px;
+  border-radius:50%;background:#eee;
+  animation:f var(--d)s infinite alternate;
+  opacity:.9
+}
+@keyframes f{
+  to{
+    transform:translate(var(--dx),var(--dy))
+    scale(.4);opacity:.3
+  }
+}
+
+.greet{
+  position:absolute;top:58%;left:0;right:0;
+  text-align:center;font-size:38px;font-weight:bold
+}
+.brief{
+  position:absolute;top:65%;left:0;right:0;
+  text-align:center;font:16px Arial;color:#817e88
+}
+
+.mic{
+  position:absolute;bottom:7%;left:50%;
+  transform:translateX(-50%);
+  width:104px;height:104px;border:0;
+  border-radius:50%;background:#9b9ce5;
+  color:#fff;font-size:38px;
+  box-shadow:0 0 30px #222
+}
+</style>
+</head>
+
+<body>
+
+<div id="boot" class="screen">
+  <div class="boot">
+    <div class="ring"></div>
+    <div class="bt">INITIALIZING JARVIS</div>
+  </div>
+</div>
+
+<div id="setup" class="screen">
+  <div class="card">
+    <div class="logo">JARVIS</div>
+
+    <div class="sub">
+      Before we begin, what should I call you?
+    </div>
+
+    <input
+      id="name"
+      maxlength="30"
+      placeholder="Your name"
+    >
+
+    <button class="cont" onclick="save()">
+      CONTINUE
+    </button>
+  </div>
+</div>
+
+<div id="home" class="screen">
+
+  <div class="head">
+    <button class="ico back">‹</button>
+
+    <div class="title">Jarvis</div>
+
+    <button class="ico brain">♧</button>
+    <button class="ico set">⚙</button>
+  </div>
+
+  <div id="time" class="time"></div>
+
+  <div id="orb" class="orb"></div>
+
+  <div id="greet" class="greet"></div>
+
+  <div id="brief" class="brief"></div>
+
+  <button class="mic">♩</button>
+
+</div>
+
+<script>
+
+function tod(){
+  let h=new Date().getHours();
+
+  return h>=5&&h<12
+    ?["Morning","morning"]
+    :h>=12&&h<17
+    ?["Afternoon","afternoon"]
+    :["Evening","evening"];
+}
+
+function home(n){
+
+  setup.style.display="none";
+
+  document.getElementById("home").style.display="block";
+
+  let t=tod();
+
+  greet.textContent=t[0]+", "+n+".";
+
+  brief.textContent="Ask for your "+t[1]+" brief";
+
+  time.textContent=new Date().toLocaleTimeString(
+    [],
+    {hour:"2-digit",minute:"2-digit"}
+  );
+
+  makeOrb();
+}
+
+function save(){
+
+  let n=name.value.trim();
+
+  if(n){
+
+    localStorage.setItem("jarvis_name",n);
+
+    home(n);
+  }
+}
+
+name.onkeydown=e=>{
+  if(e.key==="Enter")save();
+}
+
+function makeOrb(){
+
+  for(let i=0;i<330;i++){
+
+    let d=document.createElement("i");
+
+    d.className="dot";
+
+    let a=Math.random()*6.28;
+
+    let r=Math.sqrt(Math.random())*47;
+
+    d.style.left=
+      50+r*Math.cos(a)+"%";
+
+    d.style.top=
+      50+r*Math.sin(a)+"%";
+
+    d.style.setProperty(
+      "--d",
+      .5+Math.random()*2.5+"s"
+    );
+
+    d.style.setProperty(
+      "--dx",
+      (Math.random()-.5)*12+"px"
+    );
+
+    d.style.setProperty(
+      "--dy",
+      (Math.random()-.5)*12+"px"
+    );
+
+    orb.appendChild(d);
+  }
+}
+
+setTimeout(()=>{
+
+  boot.style.opacity=0;
+
+  setTimeout(()=>{
+
+    boot.style.display="none";
+
+    let n=localStorage.getItem("jarvis_name");
+
+    n
+      ?home(n)
+      :setup.style.display="flex";
+
+  },350);
+
+},2000);
+
+</script>
+
+</body>
+  </html>
