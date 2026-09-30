@@ -1,3 +1,4 @@
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -29,8 +30,24 @@ android {
     }
 
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+
+            buildConfigField(
+                "String",
+                "GROQ_API_KEY",
+                "\"${System.getenv("GROQ_API_KEY") ?: ""}\""
+            )
+        }
+
         release {
             isMinifyEnabled = false
+
+            buildConfigField(
+                "String",
+                "GROQ_API_KEY",
+                "\"${System.getenv("GROQ_API_KEY") ?: ""}\""
+            )
         }
     }
 }
