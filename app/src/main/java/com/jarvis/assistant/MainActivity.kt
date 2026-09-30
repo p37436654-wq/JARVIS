@@ -3,70 +3,38 @@ package com.jarvis.assistant
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.TextView
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
 
+    private lateinit var webView: WebView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         requestPermissions()
 
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(40, 60, 40, 40)
+        webView = WebView(this)
+
+        webView.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            allowFileAccess = true
+            allowContentAccess = true
         }
 
-        val title = TextView(this).apply {
-            text = "JARVIS"
-            textSize = 32f
-            setPadding(0, 0, 0, 40)
-        }
+        webView.webViewClient = WebViewClient()
 
-        val status = TextView(this).apply {
-            text = "Your personal AI assistant"
-            textSize = 18f
-            setPadding(0, 0, 0, 40)
-        }
+        setContentView(webView)
 
-        val startButton = Button(this).apply {
-            text = "START JARVIS"
-            setOnClickListener {
-                val intent = Intent(
-                    this@MainActivity,
-                    JarvisForegroundService::class.java
-                )
-                ContextCompat.startForegroundService(
-                    this@MainActivity,
-                    intent
-                )
-                status.text = "JARVIS is listening..."
-            }
-        }
-
-        val accessibilityButton = Button(this).apply {
-            text = "ENABLE PHONE CONTROL"
-            setOnClickListener {
-                startActivity(
-                    Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                )
-            }
-        }
-
-        layout.addView(title)
-        layout.addView(status)
-        layout.addView(startButton)
-        layout.addView(accessibilityButton)
-
-        setContentView(layout)
+        // Load the real JARVIS HTML HUD
+        webView.loadUrl("file:///android_asset/jarvis.html")
     }
 
     private fun requestPermissions() {
@@ -99,4 +67,19 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
+
+    override fun onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    override fun onDestroy() {
+        webView.destroy()
+        super.onDestroy()
+    }
 }
+            
+                
