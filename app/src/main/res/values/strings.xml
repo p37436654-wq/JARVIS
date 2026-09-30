@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">JARVIS</string>
+
+    <string name="accessibility_description">
+        JARVIS phone-control service. Allows JARVIS to interact with
+        supported on-screen controls when you explicitly enable
+        Android Accessibility access.
+    </string>
+
+</resources>
