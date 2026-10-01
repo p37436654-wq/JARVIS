@@ -13,8 +13,9 @@ object JarvisBrain {
     private const val GROQ_URL =
         "https://api.groq.com/openai/v1/chat/completions"
 
-    private const val MODEL =
-        "llama-3.3-70b-versatile"
+   private const val MODEL =
+     "openai/gpt-oss-120b"  
+    
 
     fun handle(
         context: Context,
