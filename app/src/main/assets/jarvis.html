@@ -949,18 +949,43 @@ if (window.AndroidJarvis && window.AndroidJarvis.speak) {
         );
 
 
-        /* MICROPHONE VISUAL */
+        /* MICROPHONE */
 
-        micButton.addEventListener(
-            "click",
+micButton.addEventListener(
+    "click",
+    function() {
+
+        micButton.classList.add(
+            "listening"
+        );
+
+        if (
+            window.AndroidJarvis &&
+            window.AndroidJarvis.startListening
+        ) {
+
+            window.AndroidJarvis.startListening();
+
+        }
+
+        setTimeout(
             function() {
 
-                micButton.classList.toggle(
+                micButton.classList.remove(
                     "listening"
                 );
 
-            }
+            },
+            3000
         );
+
+    }
+);
+                    
+                
+
+            
+        
 
 
         /* CLOCK LOOP */
