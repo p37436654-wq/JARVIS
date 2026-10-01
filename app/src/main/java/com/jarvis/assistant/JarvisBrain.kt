@@ -5,7 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import kotlinx.coroutines.*
 import org.json.JSONObject
-import java.net.HttpURLConnection
+import android.provider.Settings
+ import java.net.HttpURLConnection           
 import java.net.URL
 
 object JarvisBrain {
@@ -32,7 +33,7 @@ object JarvisBrain {
 
                 try {
                     val intent = Intent(
-                        Intent.ACTION_SETTINGS
+                        Settings.ACTION_SETTINGS
                     ).apply {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
