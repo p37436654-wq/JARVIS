@@ -839,7 +839,11 @@
                 name +
                 ".";
 
-
+if (window.AndroidJarvis && window.AndroidJarvis.speak) {
+    window.AndroidJarvis.speak(
+        time.greeting + ", " + name
+    );
+        }
             briefText.textContent =
                 "Ask for your " +
                 time.period +
