@@ -4,7 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.speech.tts.TextToSpeech
+import android.provider.Settings
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.util.Locale
+import android.speech.tts.TextToSpeech
 
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
@@ -53,7 +54,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         if (status == TextToSpeech.SUCCESS) {
 
             tts.language = Locale.US
-
             tts.setSpeechRate(0.95f)
             tts.setPitch(0.85f)
         }
@@ -76,6 +76,33 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                     )
                 }
             }
+        }
+
+        @JavascriptInterface
+        fun startListening() {
+
+            val intent = Intent(
+                this@MainActivity,
+                JarvisForegroundService::class.java
+            ).apply {
+                action =
+                    JarvisForegroundService.ACTION_TALK_NOW
+            }
+
+            ContextCompat.startForegroundService(
+                this@MainActivity,
+                intent
+            )
+        }
+
+        @JavascriptInterface
+        fun openPhoneControls() {
+
+            startActivity(
+                Intent(
+                    Settings.ACTION_ACCESSIBILITY_SETTINGS
+                )
+            )
         }
     }
 
@@ -143,5 +170,3 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
     }
 }
-    
-        
