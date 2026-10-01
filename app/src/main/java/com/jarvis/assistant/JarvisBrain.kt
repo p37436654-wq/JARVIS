@@ -230,7 +230,7 @@ object JarvisBrain {
 
     private fun askGroq(
         command: String,
-        callback: (String) -> Unit
+        callback: (String) -> unit
     ) {
 
         CoroutineScope(
