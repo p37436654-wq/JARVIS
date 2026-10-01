@@ -167,7 +167,7 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
                 ) {}
 
                 override fun onBeginningOfSpeech() {}
-
+                override fun onEndOfSpeech() {}
                 override fun onRmsChanged(
                     rmsdB: Float
                 ) {}
