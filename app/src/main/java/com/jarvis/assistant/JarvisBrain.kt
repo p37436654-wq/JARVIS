@@ -118,27 +118,90 @@ object JarvisBrain {
     }
 
     private fun openApp(
-        context: Context,
-        appName: String
-    ): Boolean {
+    context: Context,
+    appName: String
+): Boolean {
 
-        val packageManager =
+    val normalized = appName.trim().lowercase()
+
+    val knownPackages = mapOf(
+        "youtube" to "com.google.android.youtube",
+        "chrome" to "com.android.chrome",
+        "gmail" to "com.google.android.gm"
+    )
+
+    val knownPackage = knownPackages[normalized]
+
+    if (knownPackage != null) {
+
+        val knownIntent =
             context.packageManager
+                .getLaunchIntentForPackage(knownPackage)
 
-        val apps =
-            packageManager.getInstalledApplications(0)
+        if (knownIntent != null) {
 
-        val target =
-            apps.firstOrNull {
+            knownIntent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+            )
 
-                packageManager
-                    .getApplicationLabel(it)
-                    .toString()
-                    .equals(
-                        appName,
-                        ignoreCase = true
-                    )
-            }
+            context.startActivity(knownIntent)
+            return true
+        }
+    }
+
+    val launcherIntent = Intent(
+        Intent.ACTION_MAIN
+    ).apply {
+        addCategory(Intent.CATEGORY_LAUNCHER)
+    }
+
+    val launcherApps =
+        context.packageManager
+            .queryIntentActivities(
+                launcherIntent,
+                0
+            )
+
+    val target =
+        launcherApps.firstOrNull { info ->
+
+            val label =
+                info.loadLabel(
+                    context.packageManager
+                ).toString()
+                    .trim()
+                    .lowercase()
+
+            label == normalized ||
+                label.contains(normalized) ||
+                info.activityInfo.packageName
+                    .lowercase()
+                    .contains(normalized)
+        }
+
+    if (target != null) {
+
+        val launchIntent = Intent(
+            Intent.ACTION_MAIN
+        ).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+
+            setClassName(
+                target.activityInfo.packageName,
+                target.activityInfo.name
+            )
+
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+            )
+        }
+
+        context.startActivity(launchIntent)
+        return true
+    }
+
+    return false
+    }
 
         if (target != null) {
 
