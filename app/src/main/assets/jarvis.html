@@ -935,18 +935,27 @@ if (window.AndroidJarvis && window.AndroidJarvis.speak) {
         );
 
 
-        /* SETTINGS */
+/* SETTINGS */
 
-        settingsButton.addEventListener(
-            "click",
-            function() {
+settingsButton.addEventListener(
+    "click",
+    function() {
 
-                alert(
-                    "JARVIS settings will be connected to Android controls next."
-                );
+        if (
+            window.AndroidJarvis &&
+            window.AndroidJarvis.openPhoneControls
+        ) {
 
-            }
-        );
+            window.AndroidJarvis.openPhoneControls();
+
+        }
+
+    }
+);        
+            
+
+                
+                    
 
 
         /* MICROPHONE */
