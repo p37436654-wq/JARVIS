@@ -1,24 +1,13 @@
- <?xml version="1.0" encoding="utf-8"?>
-
+              <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Internet -->
     <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- Microphone -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-
-    <!-- Keep JARVIS running -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-
-    <!-- Notifications -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <!-- Foreground service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
-    <!-- Allow Android to expose launcher applications to JARVIS -->
     <queries>
 
         <intent>
@@ -26,7 +15,6 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
 
-        <!-- Common apps -->
         <package android:name="com.google.android.youtube" />
         <package android:name="com.android.chrome" />
         <package android:name="com.google.android.gm" />
@@ -42,9 +30,9 @@
     <application
         android:allowBackup="true"
         android:label="JARVIS"
-        android:theme="@style/AppTheme">
+        android:supportsRtl="true"
+        android:theme="@style/Theme.JARVIS">
 
-        <!-- Main JARVIS screen -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -56,27 +44,24 @@
 
         </activity>
 
-        <!-- JARVIS voice foreground service -->
         <service
             android:name=".JarvisForegroundService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
-        <!-- Phone-control accessibility service -->
         <service
             android:name=".JarvisAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="false">
 
             <intent-filter>
-                <action
-                    android:name="android.accessibilityservice.AccessibilityService" />
+                <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
 
             <meta-data
                 android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_config" />
+                android:resource="@xml/jarvis_accessibility" />
 
         </service>
 
