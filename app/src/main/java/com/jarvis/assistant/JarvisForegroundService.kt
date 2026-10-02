@@ -1,9 +1,11 @@
 package com.jarvis.assistant
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -14,6 +16,7 @@ import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import java.util.Locale
 
 class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
@@ -29,6 +32,7 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
     private var directMode = false
     private var isListening = false
     private var isSpeaking = false
+    private var ttsReady = false
 
     private val handler =
         Handler(Looper.getMainLooper())
@@ -53,7 +57,15 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
 
         tts = TextToSpeech(this, this)
 
-        startListening()
+        // Give Android a moment to finish creating the service.
+        handler.postDelayed(
+            {
+                if (hasMicrophonePermission()) {
+                    startListening()
+                }
+            },
+            1000
+        )
     }
 
     override fun onStartCommand(
@@ -63,14 +75,42 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
     ): Int {
 
         if (intent?.action == ACTION_TALK_NOW) {
+
             directMode = true
 
-            if (!isSpeaking) {
-                startListening()
+            if (!isSpeaking && hasMicrophonePermission()) {
+                stopListening()
+                handler.postDelayed(
+                    {
+                        startListening()
+                    },
+                    300
+                )
             }
         }
 
         return START_STICKY
+    }
+
+    private fun hasMicrophonePermission(): Boolean {
+
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun stopListening() {
+
+        isListening = false
+
+        try {
+            speechRecognizer?.cancel()
+            speechRecognizer?.destroy()
+        } catch (_: Exception) {
+        }
+
+        speechRecognizer = null
     }
 
     private fun startListening() {
@@ -78,14 +118,17 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
         if (isSpeaking) return
         if (isListening) return
 
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            speak(
-                "Speech recognition is not available on this device."
-            )
+        if (!hasMicrophonePermission()) {
+            speak("Microphone permission is required.")
             return
         }
 
-        speechRecognizer?.destroy()
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            speak("Speech recognition is not available on this device.")
+            return
+        }
+
+        stopListening()
 
         speechRecognizer =
             SpeechRecognizer.createSpeechRecognizer(this)
@@ -103,17 +146,24 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
                     isListening = true
                 }
 
-                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onRmsChanged(
+                    rmsdB: Float
+                ) {
+                }
 
                 override fun onBufferReceived(
                     buffer: ByteArray?
-                ) {}
+                ) {
+                }
 
                 override fun onEndOfSpeech() {
                     isListening = false
                 }
 
-                override fun onError(error: Int) {
+                override fun onError(
+                    error: Int
+                ) {
+
                     isListening = false
 
                     if (!isSpeaking) {
@@ -124,6 +174,7 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
                 override fun onResults(
                     results: Bundle?
                 ) {
+
                     isListening = false
 
                     val matches =
@@ -196,29 +247,37 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
 
                 override fun onPartialResults(
                     partialResults: Bundle?
-                ) {}
+                ) {
+                }
 
                 override fun onEvent(
                     eventType: Int,
                     params: Bundle?
-                ) {}
+                ) {
+                }
             }
         )
 
-        val intent =
-            Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+        val recognitionIntent =
+            Intent(
+                RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+            ).apply {
+
                 putExtra(
                     RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
                 )
+
                 putExtra(
                     RecognizerIntent.EXTRA_LANGUAGE,
                     Locale.getDefault()
                 )
+
                 putExtra(
                     RecognizerIntent.EXTRA_PARTIAL_RESULTS,
                     false
                 )
+
                 putExtra(
                     RecognizerIntent.EXTRA_MAX_RESULTS,
                     3
@@ -226,9 +285,13 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
             }
 
         try {
-            isListening = true
-            speechRecognizer?.startListening(intent)
-        } catch (e: Exception) {
+
+            speechRecognizer?.startListening(
+                recognitionIntent
+            )
+
+        } catch (_: Exception) {
+
             isListening = false
             restartListening()
         }
@@ -242,11 +305,17 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
 
         handler.postDelayed(
             {
-                if (!isSpeaking && !isListening) {
+
+                if (
+                    !isSpeaking &&
+                    !isListening &&
+                    hasMicrophonePermission()
+                ) {
                     startListening()
                 }
+
             },
-            700
+            1000
         )
     }
 
@@ -255,15 +324,6 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
     ) {
 
         speak(text)
-
-        handler.postDelayed(
-            {
-                if (!isSpeaking) {
-                    startListening()
-                }
-            },
-            1200
-        )
     }
 
     private fun speak(
@@ -271,6 +331,18 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
     ) {
 
         if (!::tts.isInitialized) return
+
+        if (!ttsReady) {
+            handler.postDelayed(
+                {
+                    if (ttsReady) {
+                        speak(text)
+                    }
+                },
+                500
+            )
+            return
+        }
 
         isSpeaking = true
 
@@ -282,11 +354,20 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
         )
     }
 
-    override fun onInit(status: Int) {
+    override fun onInit(
+        status: Int
+    ) {
 
         if (status == TextToSpeech.SUCCESS) {
 
-            tts.language = Locale.getDefault()
+            val result =
+                tts.setLanguage(
+                    Locale.getDefault()
+                )
+
+            ttsReady =
+                result != TextToSpeech.LANG_MISSING_DATA &&
+                result != TextToSpeech.LANG_NOT_SUPPORTED
 
             tts.setOnUtteranceProgressListener(
                 object : UtteranceProgressListener() {
@@ -300,26 +381,35 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
                     override fun onDone(
                         utteranceId: String?
                     ) {
+
                         isSpeaking = false
 
                         handler.postDelayed(
                             {
-                                if (!isListening) {
+                                if (
+                                    !isSpeaking &&
+                                    !isListening
+                                ) {
                                     startListening()
                                 }
                             },
-                            500
+                            700
                         )
                     }
 
                     override fun onError(
                         utteranceId: String?
                     ) {
+
                         isSpeaking = false
                         restartListening()
                     }
                 }
             )
+
+        } else {
+
+            ttsReady = false
         }
     }
 
@@ -344,8 +434,7 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
 
         handler.removeCallbacksAndMessages(null)
 
-        speechRecognizer?.destroy()
-        speechRecognizer = null
+        stopListening()
 
         if (::tts.isInitialized) {
             tts.stop()
@@ -361,3 +450,5 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
         return null
     }
 }
+                    
+            
