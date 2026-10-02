@@ -10,7 +10,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.speech.tts.TextToSpeech
 import androidx.activity.ComponentActivity
-import androidx.core.app.ActivityCompat
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import java.util.Locale
 
@@ -19,9 +19,15 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     private lateinit var webView: WebView
     private lateinit var tts: TextToSpeech
 
-    companion object {
-        private const val PERMISSION_REQUEST_CODE = 100
-    }
+    private val microphonePermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+
+            if (granted) {
+                startJarvisService()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,10 +56,11 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             "file:///android_asset/jarvis.html"
         )
 
-        requestPermissions()
+        requestMicrophonePermission()
+    }
 
-        // Start JARVIS automatically if microphone permission
-        // has already been granted.
+    private fun requestMicrophonePermission() {
+
         if (
             ContextCompat.checkSelfPermission(
                 this,
@@ -61,43 +68,24 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             startJarvisService()
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(
-            requestCode,
-            permissions,
-            grantResults
-        )
-
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-
-            if (
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.RECORD_AUDIO
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                startJarvisService()
-            }
+        } else {
+            microphonePermissionLauncher.launch(
+                Manifest.permission.RECORD_AUDIO
+            )
         }
     }
 
     private fun startJarvisService() {
 
-        val intent = Intent(
-            this,
-            JarvisForegroundService::class.java
-        )
+        val serviceIntent =
+            Intent(
+                this,
+                JarvisForegroundService::class.java
+            )
 
         ContextCompat.startForegroundService(
             this,
-            intent
+            serviceIntent
         )
     }
 
@@ -105,83 +93,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         if (status == TextToSpeech.SUCCESS) {
 
-            tts.language = Locale.US
-            tts.setSpeechRate(0.95f)
-            tts.setPitch(0.85f)
-        }
-    }
-
-    inner class JarvisBridge {
-
-        @JavascriptInterface
-        fun speak(text: String) {
-
-            runOnUiThread {
-
-                if (::tts.isInitialized) {
-
-                    tts.speak(
-                        text,
-                        TextToSpeech.QUEUE_FLUSH,
-                        null,
-                        "JARVIS_RESPONSE"
-                    )
-                }
-            }
-        }
-
-        @JavascriptInterface
-        fun startListening() {
-
-            startJarvisService()
-        }
-
-        @JavascriptInterface
-        fun openPhoneControls() {
-
-            startActivity(
-                Intent(
-                    Settings.ACTION_ACCESSIBILITY_SETTINGS
-                )
-            )
-        }
-    }
-
-    private fun requestPermissions() {
-
-        val permissions =
-            mutableListOf<String>()
-
-        if (
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissions.add(
-                Manifest.permission.RECORD_AUDIO
-            )
-        }
-
-        if (
-            android.os.Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissions.add(
-                Manifest.permission.POST_NOTIFICATIONS
-            )
-        }
-
-        if (permissions.isNotEmpty()) {
-
-            ActivityCompat.requestPermissions(
-                this,
-                permissions.toTypedArray(),
-                PERMISSION_REQUEST_CODE
-            )
+            tts.language = Locale.getDefault()
         }
     }
 
@@ -192,21 +104,55 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             tts.shutdown()
         }
 
-        webView.destroy()
+        if (::webView.isInitialized) {
+            webView.destroy()
+        }
 
         super.onDestroy()
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
+    inner class JarvisBridge {
 
-        if (webView.canGoBack()) {
+        @JavascriptInterface
+        fun speak(text: String) {
 
-            webView.goBack()
+            if (::tts.isInitialized) {
 
-        } else {
+                tts.speak(
+                    text,
+                    TextToSpeech.QUEUE_FLUSH,
+                    null,
+                    "JARVIS_HTML"
+                )
+            }
+        }
 
-            super.onBackPressed()
+        @JavascriptInterface
+        fun openAccessibilitySettings() {
+
+            startActivity(
+                Intent(
+                    Settings.ACTION_ACCESSIBILITY_SETTINGS
+                )
+            )
+        }
+
+        @JavascriptInterface
+        fun talkNow() {
+
+            val intent =
+                Intent(
+                    this@MainActivity,
+                    JarvisForegroundService::class.java
+                ).apply {
+                    action =
+                        JarvisForegroundService.ACTION_TALK_NOW
+                }
+
+            ContextCompat.startForegroundService(
+                this@MainActivity,
+                intent
+            )
         }
     }
 }
