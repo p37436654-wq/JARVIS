@@ -319,9 +319,8 @@ withContext(Dispatchers.Main) {
     withContext(Dispatchers.Main) {
         callback(
             "Groq connection error: ${e.message ?: "Unknown error"}"
-        )
-    }
+        ) 
 }
-
 }
-    }
+}
+}
