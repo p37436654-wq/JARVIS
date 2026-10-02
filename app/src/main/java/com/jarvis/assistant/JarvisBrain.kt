@@ -279,31 +279,31 @@ object JarvisBrain {
 
                 val status = connection.responseCode
 
-                val stream =
-                    if (status in 200..299) {
-                        connection.inputStream
-                    } else {
-                        connection.errorStream
-                    }
+val stream =
+    if (status in 200..299) {
+        connection.inputStream
+    } else {
+        connection.errorStream
+    }
 
-                val response =
-                    stream
-                        ?.bufferedReader()
-                        ?.use { it.readText() }
-                        ?: ""
+val response =
+    stream
+        ?.bufferedReader()
+        ?.use { it.readText() }
+        ?: ""
 
-                if (status !in 200..299) {
-                    withContext(Dispatchers.Main) {
-                        callback(
-                            "Groq request failed with HTTP $status."
-                        )
-                    }
-                    return@launch
-                }
+if (status !in 200..299) {
+    withContext(Dispatchers.Main) {
+        callback(
+            "Groq request failed with HTTP $status."
+        )
+    }
+    return@launch
+}
 
-                val json = JSONObject(response)
+val json = JSONObject(response)
 
-                val answer =
+val answer =
     json
         .getJSONArray("choices")
         .getJSONObject(0)
@@ -313,7 +313,15 @@ object JarvisBrain {
 withContext(Dispatchers.Main) {
     callback(answer)
 }
+
+} catch (e: Exception) {
+
+    withContext(Dispatchers.Main) {
+        callback(
+            "Groq connection error: ${e.message ?: "Unknown error"}"
+        )
+    }
 }
-} 
+
 }
-        
+    }
