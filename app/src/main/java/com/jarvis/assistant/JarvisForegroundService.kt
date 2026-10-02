@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
@@ -45,9 +46,7 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
             )
                 .setContentTitle("JARVIS")
                 .setContentText("JARVIS is listening")
-                .setSmallIcon(
-                    android.R.drawable.ic_btn_speak_now
-                )
+                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
                 .setOngoing(true)
                 .build()
         )
@@ -80,11 +79,9 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
         if (isListening) return
 
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-
             speak(
                 "Speech recognition is not available on this device."
             )
-
             return
         }
 
@@ -94,13 +91,39 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
             SpeechRecognizer.createSpeechRecognizer(this)
 
         speechRecognizer?.setRecognitionListener(
+            object : RecognitionListener {
 
-            object : android.speech.RecognitionListener {
+                override fun onReadyForSpeech(
+                    params: Bundle?
+                ) {
+                    isListening = true
+                }
+
+                override fun onBeginningOfSpeech() {
+                    isListening = true
+                }
+
+                override fun onRmsChanged(rmsdB: Float) {}
+
+                override fun onBufferReceived(
+                    buffer: ByteArray?
+                ) {}
+
+                override fun onEndOfSpeech() {
+                    isListening = false
+                }
+
+                override fun onError(error: Int) {
+                    isListening = false
+
+                    if (!isSpeaking) {
+                        restartListening()
+                    }
+                }
 
                 override fun onResults(
                     results: Bundle?
                 ) {
-
                     isListening = false
 
                     val matches =
@@ -171,17 +194,170 @@ class JarvisForegroundService : Service(), TextToSpeech.OnInitListener {
                     }
                 }
 
-                override fun onError(
-                    error: Int
-                ) {
-
-                    isListening = false
-
-                    restartListening()
-                }
-
-                override fun onReadyForSpeech(
-                    params: Bundle?
+                override fun onPartialResults(
+                    partialResults: Bundle?
                 ) {}
 
-               
+                override fun onEvent(
+                    eventType: Int,
+                    params: Bundle?
+                ) {}
+            }
+        )
+
+        val intent =
+            Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                )
+                putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE,
+                    Locale.getDefault()
+                )
+                putExtra(
+                    RecognizerIntent.EXTRA_PARTIAL_RESULTS,
+                    false
+                )
+                putExtra(
+                    RecognizerIntent.EXTRA_MAX_RESULTS,
+                    3
+                )
+            }
+
+        try {
+            isListening = true
+            speechRecognizer?.startListening(intent)
+        } catch (e: Exception) {
+            isListening = false
+            restartListening()
+        }
+    }
+
+    private fun restartListening() {
+
+        if (isSpeaking) return
+
+        handler.removeCallbacksAndMessages(null)
+
+        handler.postDelayed(
+            {
+                if (!isSpeaking && !isListening) {
+                    startListening()
+                }
+            },
+            700
+        )
+    }
+
+    private fun speakAndResume(
+        text: String
+    ) {
+
+        speak(text)
+
+        handler.postDelayed(
+            {
+                if (!isSpeaking) {
+                    startListening()
+                }
+            },
+            1200
+        )
+    }
+
+    private fun speak(
+        text: String
+    ) {
+
+        if (!::tts.isInitialized) return
+
+        isSpeaking = true
+
+        tts.speak(
+            text,
+            TextToSpeech.QUEUE_FLUSH,
+            null,
+            "JARVIS_RESPONSE"
+        )
+    }
+
+    override fun onInit(status: Int) {
+
+        if (status == TextToSpeech.SUCCESS) {
+
+            tts.language = Locale.getDefault()
+
+            tts.setOnUtteranceProgressListener(
+                object : UtteranceProgressListener() {
+
+                    override fun onStart(
+                        utteranceId: String?
+                    ) {
+                        isSpeaking = true
+                    }
+
+                    override fun onDone(
+                        utteranceId: String?
+                    ) {
+                        isSpeaking = false
+
+                        handler.postDelayed(
+                            {
+                                if (!isListening) {
+                                    startListening()
+                                }
+                            },
+                            500
+                        )
+                    }
+
+                    override fun onError(
+                        utteranceId: String?
+                    ) {
+                        isSpeaking = false
+                        restartListening()
+                    }
+                }
+            )
+        }
+    }
+
+    private fun createNotificationChannel() {
+
+        val channel =
+            NotificationChannel(
+                "jarvis_channel",
+                "JARVIS",
+                NotificationManager.IMPORTANCE_LOW
+            )
+
+        val manager =
+            getSystemService(
+                NotificationManager::class.java
+            )
+
+        manager.createNotificationChannel(channel)
+    }
+
+    override fun onDestroy() {
+
+        handler.removeCallbacksAndMessages(null)
+
+        speechRecognizer?.destroy()
+        speechRecognizer = null
+
+        if (::tts.isInitialized) {
+            tts.stop()
+            tts.shutdown()
+        }
+
+        super.onDestroy()
+    }
+
+    override fun onBind(
+        intent: Intent?
+    ): IBinder? {
+        return null
+    }
+}
