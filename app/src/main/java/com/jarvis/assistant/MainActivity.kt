@@ -8,21 +8,23 @@ import android.provider.Settings
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.speech.tts.TextToSpeech
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.util.Locale
-import android.speech.tts.TextToSpeech
 
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
     private lateinit var webView: WebView
     private lateinit var tts: TextToSpeech
 
+    companion object {
+        private const val PERMISSION_REQUEST_CODE = 100
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        requestPermissions()
 
         tts = TextToSpeech(this, this)
 
@@ -46,6 +48,56 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         webView.loadUrl(
             "file:///android_asset/jarvis.html"
+        )
+
+        requestPermissions()
+
+        // Start JARVIS automatically if microphone permission
+        // has already been granted.
+        if (
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            startJarvisService()
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(
+            requestCode,
+            permissions,
+            grantResults
+        )
+
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+
+            if (
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.RECORD_AUDIO
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                startJarvisService()
+            }
+        }
+    }
+
+    private fun startJarvisService() {
+
+        val intent = Intent(
+            this,
+            JarvisForegroundService::class.java
+        )
+
+        ContextCompat.startForegroundService(
+            this,
+            intent
         )
     }
 
@@ -81,18 +133,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         @JavascriptInterface
         fun startListening() {
 
-            val intent = Intent(
-                this@MainActivity,
-                JarvisForegroundService::class.java
-            ).apply {
-                action =
-                    JarvisForegroundService.ACTION_TALK_NOW
-            }
-
-            ContextCompat.startForegroundService(
-                this@MainActivity,
-                intent
-            )
+            startJarvisService()
         }
 
         @JavascriptInterface
@@ -117,7 +158,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 Manifest.permission.RECORD_AUDIO
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-
             permissions.add(
                 Manifest.permission.RECORD_AUDIO
             )
@@ -130,7 +170,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-
             permissions.add(
                 Manifest.permission.POST_NOTIFICATIONS
             )
@@ -141,7 +180,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             ActivityCompat.requestPermissions(
                 this,
                 permissions.toTypedArray(),
-                100
+                PERMISSION_REQUEST_CODE
             )
         }
     }
@@ -158,6 +197,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         super.onDestroy()
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
 
         if (webView.canGoBack()) {
