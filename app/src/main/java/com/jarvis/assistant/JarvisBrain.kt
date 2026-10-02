@@ -304,5 +304,16 @@ object JarvisBrain {
                 val json = JSONObject(response)
 
                 val answer =
-                    json
-                        .getJSONArray("
+    json
+        .getJSONArray("choices")
+        .getJSONObject(0)
+        .getJSONObject("message")
+        .getString("content")
+
+withContext(Dispatchers.Main) {
+    callback(answer)
+}
+}
+} 
+}
+        
